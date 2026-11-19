@@ -2,12 +2,20 @@
 
 Cole um link do **YouTube, YouTube Music ou Spotify** (música, álbum ou playlist) e o Sonora baixa tudo em **MP3**, já com
 **título, artistas participantes, álbum, ano, nº da faixa, gênero, capa e letra** gravados no arquivo — exatamente os campos
-que o Windows mostra no painel *Detalhes* (como na sua captura de tela).
+que o Windows mostra no painel *Detalhes*.
+
+> 📱 **Versão mobile disponível!** O Sonora também existe como **app nativo para Android (APK)**, com yt-dlp e ffmpeg
+> embutidos — não precisa de computador nem de Termux:
+> **[github.com/D13G0-O11VEIRA/Sonora-android](https://github.com/D13G0-O11VEIRA/Sonora-android)**
+>
+> Prefere rodar esta versão (Python) no celular? Também é possível via Termux: veja [ANDROID.md](ANDROID.md).
 
 ## Recursos
 
 - **Interface moderna** (tema escuro/claro) com fila, miniaturas, progresso por faixa, cancelar e tentar de novo
 - **Linha de comando** para automação: `python main.py "<link>"`
+- **Interface web local** (`python main.py --web`): interface para toque, usada no modo Termux e útil também no PC
+- **Versão para celular**: app Android nativo no repositório [Sonora-android](https://github.com/D13G0-O11VEIRA/Sonora-android)
 - Links de **vídeo, playlist, YouTube Music, Spotify (faixa/álbum/playlist)** — vários de uma vez, um por linha
 - Também aceita texto livre: `Mother Mother - Burning Pile`
 - **Tags ID3v2.3** (compatíveis com o Explorador do Windows): título, artistas, artista do álbum, álbum, ano, faixa/total,
@@ -105,10 +113,22 @@ sonora/
   history.py               SQLite (evita duplicados)
   cli.py                   modo terminal
   gui/                     interface (app, configurações, biblioteca/editor, widgets)
-tests/test_core.py         testes das partes puras  (python -m unittest discover -s tests -v)
+  web/                     interface web mobile (server.py + index.html) usada no Android
+tests/                     testes sem rede  (python -m unittest discover -s tests -v)
 ```
 
 Quer mudar o pipeline? Tudo passa por `Manager._process` em `sonora/manager.py`.
+
+## Repositórios
+
+| Versão | Para quê | Repositório |
+|---|---|---|
+| **Sonora** (este) | Windows / Linux / macOS (interface gráfica, terminal e web) e Android via Termux | <https://github.com/D13G0-O11VEIRA/Sonora> |
+| **Sonora Android** | App nativo para celular (APK) | <https://github.com/D13G0-O11VEIRA/Sonora-android> |
+
+As duas versões fazem o mesmo trabalho (links → MP3 com título, artistas, álbum, ano, capa e letra) e seguem a mesma
+lógica de escolha da versão certa no YouTube para links do Spotify. A versão mobile é uma reescrita em Kotlin: algumas
+opções da versão desktop não existem nela (veja o README do repositório Sonora-android).
 
 ## Uso responsável
 

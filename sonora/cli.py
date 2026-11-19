@@ -7,7 +7,7 @@ import sys
 import threading
 from pathlib import Path
 
-from .config import BITRATES, Settings
+from .config import BITRATES, Settings, is_android
 from .manager import Manager
 from .models import Status
 
@@ -29,7 +29,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--no-cover", action="store_true", help="não embutir capa")
     p.add_argument("--save-lrc", action="store_true", help="salvar letra sincronizada (.lrc)")
     p.add_argument("--force", action="store_true", help="baixar mesmo que já exista")
-    p.add_argument("--gui", action="store_true", help="forçar a interface gráfica")
+    p.add_argument("--gui", action="store_true", help="forçar a interface gráfica (desktop)")
+    p.add_argument("--web", action="store_true", help="abrir a interface web local (ideal para Android/Termux)")
+    p.add_argument("--host", default="127.0.0.1", help="endereço da interface web (padrão: só neste aparelho)")
+    p.add_argument("--port", type=int, default=8765, help="porta da interface web (padrão: 8765)")
+    p.add_argument("--no-open", action="store_true", help="não abrir o navegador automaticamente")
     return p
 
 
@@ -110,6 +114,10 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     settings = Settings.load()
     apply_args(settings, args)
+
+    if args.web or (not (args.links or args.file) and not args.gui and is_android()):
+        from .web.server import serve
+        return serve(settings, args.host, args.port, open_browser=not args.no_open)
 
     if args.gui or not (args.links or args.file):
         try:

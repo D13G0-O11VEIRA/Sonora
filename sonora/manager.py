@@ -29,7 +29,7 @@ from .models import Batch, Job, Resolved, Status, TrackMeta
 from .resolvers import spotify
 from .resolvers import youtube as yt
 from .tagger import write_tags
-from .utils import render_template, sanitize_filename, unique_path
+from .utils import media_scan, render_template, sanitize_filename, unique_path
 
 _ANSI = re.compile(r"\x1b\[[0-9;]*m")
 
@@ -375,6 +375,7 @@ class Manager:
         if s.save_lrc and synced:
             target.with_suffix(".lrc").write_text(synced, encoding="utf-8")
         job.output_path = target
+        media_scan(target)
         self.history.add(m, target)
         self.log(f"✔ {target.name}")
         return Status.DONE

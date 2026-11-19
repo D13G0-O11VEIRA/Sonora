@@ -1,6 +1,7 @@
 """Leitura de vídeos e playlists do YouTube / YouTube Music via yt-dlp."""
 from __future__ import annotations
 
+import os
 import re
 from typing import Callable
 
@@ -17,8 +18,14 @@ def ydl_base_opts(settings: Settings, **extra) -> dict:
         "noplaylist": True,
         "socket_timeout": 20,
     }
-    if settings.cookies_browser:
+    if settings.cookies_file and os.path.isfile(settings.cookies_file):
+        opts["cookiefile"] = settings.cookies_file
+    elif settings.cookies_browser:
         opts["cookiesfrombrowser"] = (settings.cookies_browser,)
+    if settings.js_runtime:
+        # YouTube exige um interpretador JS; só o Deno vem habilitado por padrão.
+        opts["js_runtimes"] = {settings.js_runtime: {}}
+        opts["remote_components"] = ["ejs:github"]
     opts.update(extra)
     return opts
 

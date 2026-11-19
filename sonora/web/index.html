@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#141a3a">
+<title>Sonora</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/static/icon-192.png">
+<link rel="apple-touch-icon" href="/static/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#141a3a; --bg2:#0e1330; --line:#2a3262; --text:#eef1ff; --mute:#9aa3d1;
+  --pink:#ff4f8b; --pink-ink:#2a0713; --mint:#5ee6b0; --amber:#ffc15e; --red:#ff6b6b;
+  --field:#1b2250; --radius:14px;
+  --display:"Bricolage Grotesque","Trebuchet MS",system-ui,sans-serif;
+  --body:"DM Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme:light){
+  :root{--bg:#f4f2fb; --bg2:#ffffff; --line:#d9d6ee; --text:#1a1d3d; --mute:#5d6290;
+    --pink:#e0245f; --pink-ink:#fff; --mint:#0f9d6b; --amber:#b9770e; --red:#d1383d; --field:#ebe8f7; color-scheme:light;}
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--text);font:400 16px/1.45 var(--body);
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left)}
+button,input,textarea,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--pink);outline-offset:2px}
+.app{max-width:720px;margin:0 auto;min-height:100%;display:flex;flex-direction:column}
+header{display:flex;align-items:center;justify-content:space-between;padding:18px 18px 8px}
+h1{font:700 28px/1 var(--display);letter-spacing:-.02em;margin:0}
+.pill{font-size:13px;color:var(--mute);border:1px solid var(--line);border-radius:99px;padding:4px 12px}
+.pill.busy{color:var(--pink);border-color:var(--pink)}
+main{flex:1;padding:0 18px 110px}
+section[hidden]{display:none}
+.composer{display:grid;gap:10px;margin:10px 0 6px}
+textarea{width:100%;min-height:92px;resize:vertical;background:var(--field);border:1px solid var(--line);
+  border-radius:var(--radius);padding:12px 14px}
+textarea::placeholder,input::placeholder{color:var(--mute)}
+.row{display:flex;gap:10px}
+.btn{border:0;border-radius:var(--radius);padding:13px 18px;font-weight:600;background:var(--field);cursor:pointer;min-height:48px}
+.btn.primary{background:var(--pink);color:var(--pink-ink);flex:1}
+.btn.small{min-height:36px;padding:6px 14px;font-size:14px;border-radius:99px}
+.btn:disabled{opacity:.5}
+.notice{min-height:22px;font-size:14px;color:var(--mute);margin:2px 2px 8px}
+.list{list-style:none;margin:0;padding:0}
+.job{display:grid;grid-template-columns:56px 1fr auto;gap:2px 14px;align-items:center;padding:12px 0;border-top:1px solid var(--line)}
+.art{grid-row:1 / span 3;width:56px;height:56px;border-radius:10px;background:var(--field) center/cover no-repeat;position:relative;
+  transition:border-radius .5s ease}
+.job.active .art{border-radius:50%;animation:spin 3.2s linear infinite}
+.job.active .art::after{content:"";position:absolute;inset:0;border-radius:50%;
+  background:radial-gradient(circle,var(--bg) 0 9%,transparent 10%),repeating-radial-gradient(circle,transparent 0 3px,rgba(0,0,0,.18) 3px 4px)}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.job.active .art{animation:none}}
+.t{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.s{font-size:14px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.s.err{color:var(--red);white-space:normal}
+.bar{height:3px;border-radius:2px;background:var(--line);overflow:hidden;grid-column:2}
+.bar i{display:block;height:100%;width:0;background:var(--pink);transition:width .4s}
+.job.done .bar i,.job.skipped .bar i{background:var(--mint)}
+.job.error .bar i{background:var(--red)}
+.st{font-size:13px;color:var(--mute);grid-column:2}
+.job.done .st{color:var(--mint)} .job.error .st{color:var(--red)} .job.skipped .st{color:var(--amber)}
+.act{grid-column:3;grid-row:1 / span 3}
+.empty{color:var(--mute);text-align:center;padding:44px 12px}
+.empty b{display:block;font:700 20px var(--display);color:var(--text);margin-bottom:6px}
+.tools{display:flex;gap:10px;justify-content:flex-end;margin-top:14px}
+input[type=text],input[type=password],input[type=search],select{width:100%;background:var(--field);border:1px solid var(--line);
+  border-radius:var(--radius);padding:12px 14px;min-height:48px}
+.lib{border-top:1px solid var(--line);padding:11px 0}
+.lib .t{font-weight:500}
+.cnt{color:var(--mute);font-size:14px;margin:10px 2px}
+form h2{font:700 18px var(--display);margin:26px 0 8px}
+label.f{display:grid;gap:6px;margin:12px 0;font-size:14px;color:var(--mute)}
+.seg{display:flex;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.seg label{flex:1;text-align:center;padding:11px 0;cursor:pointer;color:var(--mute);font-size:15px}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label:has(input:checked){background:var(--pink);color:var(--pink-ink);font-weight:600}
+.seg label:has(input:focus-visible){outline:2px solid var(--pink);outline-offset:-2px}
+.sw{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+.sw span{color:var(--text);font-size:15px}
+.sw input{appearance:none;width:48px;height:28px;border-radius:99px;background:var(--line);position:relative;flex:none;cursor:pointer;transition:background .2s}
+.sw input::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .2s}
+.sw input:checked{background:var(--pink)} .sw input:checked::after{transform:translateX(20px)}
+.hint{font-size:13px;color:var(--mute);margin:4px 0 0}
+pre.log{background:var(--bg2);border:1px solid var(--line);border-radius:var(--radius);padding:12px;font:12px/1.5 ui-monospace,Consolas,monospace;
+  max-height:220px;overflow:auto;white-space:pre-wrap;color:var(--mute)}
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--bg2);border-top:1px solid var(--line);
+  padding-bottom:env(safe-area-inset-bottom)}
+nav div{max-width:720px;margin:0 auto;display:flex}
+nav button{flex:1;background:none;border:0;padding:10px 0 9px;display:grid;justify-items:center;gap:3px;font-size:12px;color:var(--mute);cursor:pointer}
+nav button[aria-current=page]{color:var(--pink)}
+nav svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+</style>
+</head>
+<body>
+<div class="app">
+  <header><h1>Sonora</h1><span class="pill" id="pill">Pronto</span></header>
+  <main>
+    <section id="v-fila">
+      <div class="composer">
+        <textarea id="input" placeholder="Cole links do YouTube ou Spotify (música, álbum ou playlist), um por linha — ou digite: Artista - Música" aria-label="Links para baixar"></textarea>
+        <div class="row">
+          <button class="btn" id="paste" type="button">Colar</button>
+          <button class="btn primary" id="add" type="button">Baixar</button>
+        </div>
+      </div>
+      <div class="notice" id="notice" role="status"></div>
+      <ul class="list" id="jobs"></ul>
+      <div class="empty" id="empty"><b>Nenhuma música na fila</b>Cole um link acima ou compartilhe um link do YouTube/Spotify com o Sonora.</div>
+      <div class="tools" id="tools" hidden>
+        <button class="btn small" id="clear" type="button">Limpar concluídas</button>
+        <button class="btn small" id="cancelAll" type="button">Cancelar tudo</button>
+      </div>
+    </section>
+
+    <section id="v-lib" hidden>
+      <input type="search" id="q" placeholder="Buscar por título, artista ou álbum" aria-label="Buscar na biblioteca">
+      <div class="cnt" id="libcount"></div>
+      <div id="liblist"></div>
+    </section>
+
+    <section id="v-set" hidden>
+      <form id="form" autocomplete="off">
+        <h2>Destino</h2>
+        <label class="f">Pasta das músicas<input type="text" id="s_output_dir"></label>
+        <p class="hint">No Android, a pasta padrão é Música/Sonora no armazenamento do celular.</p>
+        <div class="f">Qualidade do MP3 (kbps)
+          <div class="seg" id="s_bitrate"></div></div>
+        <label class="f">Modelo do nome do arquivo<input type="text" id="s_filename_template"></label>
+        <p class="hint">Variáveis: {artist} {title} {album} {year} {track} {index} {playlist}. Use / para criar subpastas.</p>
+        <label class="sw"><span>Playlists e álbuns em subpasta</span><input type="checkbox" id="s_playlist_subfolder"></label>
+        <label class="sw"><span>Criar arquivo .m3u8 da playlist</span><input type="checkbox" id="s_create_m3u"></label>
+        <label class="sw"><span>Pular o que já foi baixado</span><input type="checkbox" id="s_skip_existing"></label>
+
+        <h2>Metadados</h2>
+        <label class="sw"><span>Embutir capa</span><input type="checkbox" id="s_embed_cover"></label>
+        <label class="sw"><span>Completar álbum, ano e gênero online</span><input type="checkbox" id="s_enrich_online"></label>
+        <label class="sw"><span>Buscar e embutir a letra</span><input type="checkbox" id="s_fetch_lyrics"></label>
+        <label class="sw"><span>Salvar também letra sincronizada (.lrc)</span><input type="checkbox" id="s_save_lrc"></label>
+        <label class="f">Separador de artistas<input type="text" id="s_artist_separator"></label>
+
+        <h2>Downloads</h2>
+        <label class="f">Simultâneos (1 a 4)<input type="text" inputmode="numeric" id="s_concurrent_downloads"></label>
+        <label class="f">Interpretador de JavaScript
+          <select id="s_js_runtime"><option value="">Automático (Deno)</option><option value="node">Node.js</option>
+          <option value="deno">Deno</option><option value="bun">Bun</option><option value="quickjs">QuickJS</option></select></label>
+        <label class="f">Arquivo de cookies (opcional)<input type="text" id="s_cookies_file" placeholder="/sdcard/Download/cookies.txt"></label>
+        <p class="hint">Use só se o YouTube pedir login ou confirmar que você não é um robô.</p>
+
+        <h2>Spotify (opcional)</h2>
+        <label class="f">Client ID<input type="text" id="s_spotify_client_id"></label>
+        <label class="f">Client Secret<input type="password" id="s_spotify_client_secret" placeholder=""></label>
+        <p class="hint">Sem isto o Sonora lê links do Spotify pela página pública (até cerca de 100 faixas por playlist).</p>
+
+        <div class="row" style="margin-top:22px">
+          <button class="btn primary" type="submit">Salvar ajustes</button>
+          <button class="btn" type="button" id="upd">Atualizar yt-dlp</button>
+        </div>
+        <div class="notice" id="setmsg" role="status"></div>
+        <h2>Registro</h2>
+        <pre class="log" id="log"></pre>
+      </form>
+    </section>
+  </main>
+
+  <nav aria-label="Seções"><div>
+    <button data-view="fila" aria-current="page"><svg viewBox="0 0 24 24"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 20h14"/></svg>Fila</button>
+    <button data-view="lib"><svg viewBox="0 0 24 24"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg>Biblioteca</button>
+    <button data-view="set"><svg viewBox="0 0 24 24"><path d="M4 7h10m4 0h2M4 17h2m4 0h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>Ajustes</button>
+  </div></nav>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const BOOLS = ["playlist_subfolder","create_m3u","skip_existing","embed_cover","enrich_online","fetch_lyrics","save_lrc"];
+const TEXTS = ["output_dir","filename_template","artist_separator","cookies_file","spotify_client_id","js_runtime"];
+
+async function api(path, body) {
+  const opt = body === undefined ? {} : {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)};
+  const r = await fetch(path, opt);
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || r.statusText);
+  return r.json();
+}
+
+/* ---------- navegação ---------- */
+function show(view) {
+  for (const v of ["fila", "lib", "set"]) $("v-" + v).hidden = v !== view;
+  document.querySelectorAll("nav button").forEach(b => b.dataset.view === view ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current"));
+  if (view === "lib") loadLib();
+  if (view === "set") loadSettings();
+  history.replaceState(null, "", "#" + view);
+}
+document.querySelectorAll("nav button").forEach(b => b.onclick = () => show(b.dataset.view));
+
+/* ---------- fila ---------- */
+const nodes = new Map();
+function jobNode(j) {
+  const li = document.createElement("li");
+  li.className = "job";
+  li.innerHTML = '<div class="art"></div><div class="t"></div><div class="act"></div><div class="s"></div><div class="bar"><i></i></div><div class="st"></div>';
+  li.querySelector(".s").style.gridColumn = "2";
+  const b = document.createElement("button");
+  b.className = "btn small"; b.type = "button";
+  li.querySelector(".act").append(b);
+  li._btn = b;
+  return li;
+}
+function renderJob(li, j) {
+  li.className = "job " + j.code + (j.active ? " active" : "");
+  li.querySelector(".t").textContent = j.title;
+  const s = li.querySelector(".s");
+  s.className = "s" + (j.error ? " err" : "");
+  s.textContent = j.error || [j.artists, j.album].filter(Boolean).join(" • ");
+  li.querySelector(".bar i").style.width = (j.code === "done" || j.code === "skipped" ? 100 : j.progress) + "%";
+  li.querySelector(".st").textContent = j.code === "downloading" ? `Baixando ${Math.round(j.progress)}%  ${j.speed}` : j.status;
+  const art = li.querySelector(".art");
+  if (j.cover && art.dataset.src !== j.cover) { art.dataset.src = j.cover; art.style.backgroundImage = `url("${j.cover.replace(/"/g, "%22")}")`; }
+  const b = li._btn;
+  if (j.active) { b.textContent = "Cancelar"; b.onclick = () => { b.disabled = true; api("/api/cancel", {id: j.id}); }; b.disabled = false; }
+  else if (j.code === "error" || j.code === "cancelled") { b.textContent = "Tentar de novo"; b.disabled = false; b.onclick = () => api("/api/retry", {id: j.id}); }
+  else { b.textContent = j.file ? "Pronto" : "—"; b.disabled = true; }
+}
+function renderState(st) {
+  const ids = new Set(st.jobs.map(j => j.id));
+  const list = $("jobs");
+  for (const [id, li] of nodes) if (!ids.has(id)) { li.remove(); nodes.delete(id); }
+  for (const j of st.jobs) {
+    let li = nodes.get(j.id);
+    if (!li) { li = jobNode(j); nodes.set(j.id, li); list.append(li); }
+    renderJob(li, j);
+  }
+  $("empty").hidden = st.jobs.length > 0;
+  $("tools").hidden = st.jobs.length === 0;
+  $("pill").textContent = st.active ? `${st.active} em andamento` : "Pronto";
+  $("pill").classList.toggle("busy", st.active > 0);
+  $("notice").textContent = st.notice || "";
+  $("log").textContent = st.log.join("\n");
+}
+let polling = false;
+async function poll() {
+  if (polling || document.hidden) return;
+  polling = true;
+  try { renderState(await api("/api/state")); } catch (e) { $("notice").textContent = "Sem conexão com o Sonora. Ele ainda está rodando no Termux?"; }
+  polling = false;
+}
+setInterval(poll, 1000);
+document.addEventListener("visibilitychange", poll);
+
+$("add").onclick = async () => {
+  const text = $("input").value.trim();
+  if (!text) { $("notice").textContent = "Cole um link primeiro."; return; }
+  try {
+    const r = await api("/api/add", {text});
+    if (r.added) { $("input").value = ""; $("notice").textContent = `Lendo ${r.added} link(s)…`; poll(); }
+  } catch (e) { $("notice").textContent = e.message; }
+};
+$("paste").onclick = async () => {
+  try {
+    const t = (await navigator.clipboard.readText()).trim();
+    if (t) $("input").value = ($("input").value.trim() ? $("input").value.trim() + "\n" : "") + t;
+    else $("notice").textContent = "A área de transferência está vazia.";
+  } catch (e) { $("notice").textContent = "Não consegui ler a área de transferência. Segure no campo e escolha Colar."; }
+};
+$("clear").onclick = () => api("/api/clear", {}).then(poll);
+$("cancelAll").onclick = () => api("/api/cancel_all", {}).then(poll);
+
+/* ---------- biblioteca ---------- */
+let LIB = [];
+const mmss = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+async function loadLib() {
+  $("libcount").textContent = "Lendo biblioteca…";
+  try { const r = await api("/api/library"); LIB = r.items; $("libcount").dataset.folder = r.folder || ""; drawLib(); }
+  catch (e) { $("libcount").textContent = e.message; }
+}
+function drawLib() {
+  const q = $("q").value.trim().toLowerCase();
+  const box = $("liblist"); box.replaceChildren();
+  let n = 0;
+  for (const it of LIB) {
+    if (q && !`${it.title} ${it.artist} ${it.album}`.toLowerCase().includes(q)) continue;
+    if (++n > 400) continue;
+    const d = document.createElement("div"); d.className = "lib";
+    const t = document.createElement("div"); t.className = "t"; t.textContent = it.title;
+    const s = document.createElement("div"); s.className = "s";
+    s.textContent = [it.artist, it.album, it.year, mmss(it.duration)].filter(Boolean).join(" • ");
+    d.append(t, s); box.append(d);
+  }
+  $("libcount").textContent = `${Math.min(n, 400)} de ${LIB.length} músicas` + ($("libcount").dataset.folder ? `  •  ${$("libcount").dataset.folder}` : "");
+}
+$("q").oninput = drawLib;
+
+/* ---------- ajustes ---------- */
+async function loadSettings() {
+  const s = await api("/api/settings");
+  for (const k of TEXTS) $("s_" + k).value = s[k] ?? "";
+  for (const k of BOOLS) $("s_" + k).checked = !!s[k];
+  $("s_concurrent_downloads").value = s.concurrent_downloads;
+  $("s_spotify_client_secret").placeholder = s.spotify_client_secret_set ? "(já definido — deixe vazio para manter)" : "";
+  const seg = $("s_bitrate"); seg.replaceChildren();
+  for (const b of s.bitrates) {
+    const l = document.createElement("label"), i = document.createElement("input");
+    i.type = "radio"; i.name = "bitrate"; i.value = b; i.checked = s.bitrate === b;
+    l.append(i, b); seg.append(l);
+  }
+}
+$("form").onsubmit = async (e) => {
+  e.preventDefault();
+  const body = {bitrate: (document.querySelector("#s_bitrate input:checked") || {}).value};
+  for (const k of TEXTS) body[k] = $("s_" + k).value;
+  for (const k of BOOLS) body[k] = $("s_" + k).checked;
+  body.concurrent_downloads = parseInt($("s_concurrent_downloads").value, 10) || 2;
+  body.spotify_client_secret = $("s_spotify_client_secret").value;
+  try { await api("/api/settings", body); $("s_spotify_client_secret").value = ""; $("setmsg").textContent = "Ajustes salvos."; }
+  catch (err) { $("setmsg").textContent = err.message; }
+};
+$("upd").onclick = async () => { await api("/api/update_ytdlp", {}); $("setmsg").textContent = "Atualizando o yt-dlp… acompanhe no registro abaixo e reinicie o Sonora ao terminar."; };
+
+/* ---------- início ---------- */
+const params = new URLSearchParams(location.search);
+if (params.get("text")) { $("input").value = params.get("text"); history.replaceState(null, "", "/"); $("input").focus(); }
+show(["fila", "lib", "set"].includes(location.hash.slice(1)) ? location.hash.slice(1) : "fila");
+poll();
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
+</script>
+</body>
+</html>

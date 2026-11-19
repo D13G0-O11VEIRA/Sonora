@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import asdict, dataclass, fields
 from pathlib import Path
 
@@ -23,13 +24,26 @@ TEMPLATE_PRESETS = {
     "Nº da playlist - Artista - Título": "{index} - {artist} - {title}",
 }
 
+def is_android() -> bool:
+    """True quando rodando dentro do Termux (Android)."""
+    return "TERMUX_VERSION" in os.environ or "com.termux" in os.environ.get("PREFIX", "")
+
+
+def default_output_dir() -> str:
+    if is_android():
+        shared = Path.home() / "storage" / "music"      # criado por `termux-setup-storage`
+        if shared.exists():
+            return str(shared / "Sonora")                # => /sdcard/Music/Sonora
+    return str(Path.home() / "Music" / "Sonora")
+
+
 BITRATES = ["128", "192", "256", "320"]
 BROWSERS = ["", "chrome", "firefox", "edge", "brave", "opera", "vivaldi", "safari"]
 
 
 @dataclass
 class Settings:
-    output_dir: str = str(Path.home() / "Music" / "Sonora")
+    output_dir: str = default_output_dir()
     bitrate: str = "320"
     filename_template: str = "{artist} - {title}"
     playlist_subfolder: bool = True      # playlists/álbuns em uma subpasta própria
@@ -39,10 +53,12 @@ class Settings:
     fetch_lyrics: bool = True            # busca letras no LRCLIB
     save_lrc: bool = False               # salva .lrc (letra sincronizada) ao lado do mp3
     skip_existing: bool = True
-    concurrent_downloads: int = 3
+    concurrent_downloads: int = 2 if is_android() else 3
     artist_separator: str = "; "         # como o Windows separa "Artistas participantes"
     watch_list_is_playlist: bool = False  # link com vídeo + playlist => baixa a playlist toda
-    cookies_browser: str = ""            # útil para vídeos com restrição de idade
+    cookies_browser: str = ""            # útil para vídeos com restrição de idade (PC)
+    cookies_file: str = ""               # cookies.txt (Netscape) - alternativa no Android
+    js_runtime: str = "node" if is_android() else ""   # "", deno, node, bun, quickjs
     spotify_client_id: str = ""
     spotify_client_secret: str = ""
     theme: str = "dark"                  # dark | light | system

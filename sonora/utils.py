@@ -207,3 +207,14 @@ def reveal_in_file_manager(path: Path) -> None:
             subprocess.Popen(["xdg-open", str(path.parent if path.is_file() else path)])
     except Exception:
         pass
+
+
+def media_scan(path: Path) -> None:
+    """No Android (Termux), avisa o sistema do arquivo novo para ele aparecer no player/galeria."""
+    exe = shutil.which("termux-media-scan")
+    if not exe:
+        return
+    try:
+        subprocess.run([exe, str(path)], timeout=15, capture_output=True)
+    except Exception:
+        pass
