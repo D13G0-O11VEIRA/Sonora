@@ -205,8 +205,9 @@ def _via_embed(kind: str, sid: str, source: str, settings: Settings, log: Callab
     items = ent.get("trackList") or []
     if not items:
         raise SpotifyError("Nenhuma faixa encontrada nesse link (playlist privada ou vazia?).")
-    if len(items) >= 100:
-        log("Aviso: sem credenciais do Spotify o limite é ~100 faixas por playlist.")
+    capped = len(items) >= 100
+    if capped:
+        log("Aviso: sem login o Spotify entrega no máximo ~100 faixas por playlist.")
 
     album_artist = _clean(ent.get("subtitle", "")) if kind == "album" else ""
     tracks: list[TrackMeta] = []
@@ -228,7 +229,7 @@ def _via_embed(kind: str, sid: str, source: str, settings: Settings, log: Callab
             t.track_no, t.track_total = i, len(items)
             t.cover_url = t.thumb_url = cover
         tracks.append(t)
-    return Resolved(tracks, name or ("Álbum" if kind == "album" else "Playlist"), kind)
+    return Resolved(tracks, name or ("Álbum" if kind == "album" else "Playlist"), kind, capped=capped)
 
 
 # ================================================================== API pública

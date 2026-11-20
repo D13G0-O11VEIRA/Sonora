@@ -61,6 +61,8 @@ class SettingsTab:
 
         self._section("Downloads")
         self._slider("Downloads simultâneos", "concurrent_downloads", 1, 6)
+        self._entry("Pausar a cada N músicas (0 = nunca)", "batch_size")
+        self._hint("Playlists maiores que isso baixam um lote por vez; você clica em Continuar para o próximo.")
         self._check("Link com vídeo + playlist baixa a playlist inteira", "watch_list_is_playlist")
         self._choice("Cookies do navegador", "cookies_browser", COOKIES)
         self._hint("Só é necessário para vídeos com restrição de idade ou quando o YouTube pede login.")

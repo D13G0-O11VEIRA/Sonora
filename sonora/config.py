@@ -54,6 +54,7 @@ class Settings:
     save_lrc: bool = False               # salva .lrc (letra sincronizada) ao lado do mp3
     skip_existing: bool = True
     concurrent_downloads: int = 2 if is_android() else 3
+    batch_size: int = 100                # playlists maiores pausam a cada N músicas (0 = nunca pausar)
     artist_separator: str = "; "         # como o Windows separa "Artistas participantes"
     watch_list_is_playlist: bool = False  # link com vídeo + playlist => baixa a playlist toda
     cookies_browser: str = ""            # útil para vídeos com restrição de idade (PC)
@@ -75,6 +76,7 @@ class Settings:
             if f.name in raw and isinstance(raw[f.name], type(getattr(s, f.name))):
                 setattr(s, f.name, raw[f.name])
         s.concurrent_downloads = max(1, min(6, int(s.concurrent_downloads)))
+        s.batch_size = max(0, min(1000, int(s.batch_size)))
         if s.bitrate not in BITRATES:
             s.bitrate = "320"
         return s

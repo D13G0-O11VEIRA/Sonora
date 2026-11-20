@@ -29,6 +29,7 @@ from .models import Batch, Job, Resolved, Status, TrackMeta
 from .resolvers import spotify
 from .resolvers import youtube as yt
 from .tagger import write_tags
+from .texts import CAPPED_NOTICE
 from .utils import media_scan, render_template, sanitize_filename, unique_path
 
 _ANSI = re.compile(r"\x1b\[[0-9;]*m")
@@ -53,6 +54,7 @@ class Manager:
         self.history = History(DB_FILE)
         self.events: queue.Queue = queue.Queue()
         self.jobs: dict[int, Job] = {}
+        self.batches: list[Batch] = []     # playlists com faixas pendentes ou aviso
 
         self._resolve_pool = ThreadPoolExecutor(2, thread_name_prefix="resolve")
         self._pool = ThreadPoolExecutor(8, thread_name_prefix="job")
@@ -64,6 +66,7 @@ class Manager:
         self.logger.setLevel(logging.INFO)
         for h in list(self.logger.handlers):
             self.logger.removeHandler(h)
+            h.close()
         fh = RotatingFileHandler(LOG_FILE, maxBytes=1_000_000, backupCount=2, encoding="utf-8")
         fh.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
         qh = _QueueLogHandler(self.events)
@@ -153,25 +156,72 @@ class Manager:
             self._notice("Nenhuma faixa encontrada nesse link.")
             return
         batch = None
+        tracks = list(res.tracks)
         if res.kind in ("album", "playlist"):
             folder = s.out_path / sanitize_filename(res.name) if s.playlist_subfolder else s.out_path
-            batch = Batch(res.name, res.kind, folder)
-            batch.remaining = len(res.tracks)
+            batch = Batch(res.name, res.kind, folder, total=len(tracks), capped=res.capped)
+            size = s.batch_size
+            if size > 0 and len(tracks) > size:      # lista grande: enfileira um lote e guarda o resto
+                batch.pending = tracks[size:]
+                tracks = tracks[:size]
+            self.batches.append(batch)
+        self._spawn(tracks, batch)
+        if res.capped:
+            self._notice(CAPPED_NOTICE)
+        self._refresh_batches()
+
+    def _spawn(self, tracks: list[TrackMeta], batch: Batch | None) -> None:
         jobs: list[Job] = []
-        for i, meta in enumerate(res.tracks, 1):
+        for meta in tracks:
             if batch:
-                meta.playlist_name, meta.playlist_index = res.name, i
+                batch.enqueued += 1
+                meta.playlist_name, meta.playlist_index = batch.name, batch.enqueued
             job = Job(meta, batch)
             self.jobs[job.id] = job
             if batch:
                 batch.jobs.append(job)
             jobs.append(job)
+        if batch:
+            with batch.lock:
+                batch.remaining += len(jobs)
         self._inc_work(len(jobs))            # antes de liberar o resolvedor (evita "idle" falso)
-        self.log(f"{len(jobs)} faixa(s) adicionada(s)" + (f" de '{res.name}'" if res.name else ""))
+        name = batch.name if batch else ""
+        self.log(f"{len(jobs)} faixa(s) adicionada(s)" + (f" de '{name}'" if name else ""))
         for job in jobs:
             self.emit("job_added", job)
         for job in jobs:
             self._pool.submit(self._run_job, job)
+
+    # ------------------------------------------------------------ lotes ("Continuar")
+    def batch_info(self) -> list[dict]:
+        size = self.settings.batch_size or 100
+        return [{
+            "id": b.id, "name": b.name, "kind": b.kind, "enqueued": b.enqueued, "total": b.total,
+            "pending": len(b.pending), "next": min(len(b.pending), size), "capped": b.capped and not b.dismissed,
+        } for b in self.batches]
+
+    def _refresh_batches(self) -> None:
+        self.batches = [b for b in self.batches if b.pending or (b.capped and not b.dismissed)]
+        self.emit("batches", self.batch_info())
+
+    def continue_batch(self, batch_id: int) -> int:
+        """Enfileira o próximo lote de uma playlist grande, de onde parou. Retorna quantas faixas entraram."""
+        b = next((x for x in self.batches if x.id == batch_id), None)
+        if not b or not b.pending:
+            return 0
+        size = self.settings.batch_size or 100
+        chunk, b.pending = b.pending[:size], b.pending[size:]
+        self._spawn(chunk, b)
+        self._refresh_batches()
+        return len(chunk)
+
+    def dismiss_batch(self, batch_id: int) -> None:
+        """Dispensa o aviso e descarta as faixas que ainda não foram enfileiradas."""
+        for b in self.batches:
+            if b.id == batch_id:
+                b.dismissed = True
+                b.pending = []
+        self._refresh_batches()
 
     # ------------------------------------------------------------ controle
     def cancel(self, job: Job) -> None:
@@ -242,6 +292,8 @@ class Manager:
                 last = b.remaining <= 0
             if last and self.settings.create_m3u:
                 self._write_m3u(b)
+            if last:
+                self._refresh_batches()
         self._dec_work()
 
     @staticmethod

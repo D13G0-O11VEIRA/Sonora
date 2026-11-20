@@ -12,6 +12,7 @@ from .. import APP_NAME, __version__
 from ..config import BITRATES, Settings
 from ..manager import Manager
 from ..models import Job, Status
+from ..texts import CAPPED_HELP
 from ..utils import reveal_in_file_manager
 from .library import LibraryTab
 from .settings_tab import SettingsTab
@@ -74,7 +75,7 @@ class App(ctk.CTk):
     # ------------------------------------------------------------ aba Baixar
     def _build_download_tab(self, tab) -> None:
         tab.grid_columnconfigure(0, weight=1)
-        tab.grid_rowconfigure(2, weight=1)
+        tab.grid_rowconfigure(3, weight=1)
 
         top = ctk.CTkFrame(tab)
         top.grid(row=0, column=0, sticky="ew", pady=(0, 8))
@@ -105,14 +106,17 @@ class App(ctk.CTk):
         ctk.CTkButton(opts, text="Alterar…", width=90, command=self._choose_folder).pack(side="left", padx=4)
         ctk.CTkButton(opts, text="Abrir", width=70, command=self.open_output_folder).pack(side="left", padx=(4, 12))
 
+        self.batch_frame = ctk.CTkFrame(tab, fg_color="transparent")   # playlists grandes: "Continuar"
+        self.batch_frame.grid(row=2, column=0, sticky="ew")
+
         self.list = ctk.CTkScrollableFrame(tab)
-        self.list.grid(row=2, column=0, sticky="nsew")
+        self.list.grid(row=3, column=0, sticky="nsew")
         self.empty = ctk.CTkLabel(self.list, text="A fila está vazia.\nCole um link acima para começar.",
                                   text_color=("gray40", "gray60"), font=ctk.CTkFont(size=14))
         self.empty.pack(pady=60)
 
         bottom = ctk.CTkFrame(tab, fg_color="transparent")
-        bottom.grid(row=3, column=0, sticky="ew", pady=(8, 0))
+        bottom.grid(row=4, column=0, sticky="ew", pady=(8, 0))
         self.summary = ctk.CTkLabel(bottom, text="", anchor="w")
         self.summary.pack(side="left", padx=4)
         self.status_msg = ctk.CTkLabel(bottom, text="", anchor="w", text_color=("gray35", "gray65"))
@@ -218,9 +222,45 @@ class App(ctk.CTk):
             self.notice(data)
             if any(w in data.lower() for w in ("não consegui", "não suportado", "não são suportados")):
                 messagebox.showwarning(APP_NAME, data)
+        elif kind == "batches":
+            self._render_batches(data)
         elif kind == "idle":
-            self.notice("Tudo pronto! ✔")
+            waiting = any(b["pending"] for b in self.manager.batch_info())
+            self.notice("Lote concluído! Clique em Continuar para baixar as próximas." if waiting else "Tudo pronto! ✔")
             self.library.scan()
+
+    def _render_batches(self, infos: list) -> None:
+        """Cartões de playlists grandes: mostram o progresso do lote e o botão Continuar."""
+        for w in self.batch_frame.winfo_children():
+            w.destroy()
+        for b in infos:
+            box = ctk.CTkFrame(self.batch_frame)
+            box.pack(fill="x", pady=(0, 8))
+            ctk.CTkLabel(
+                box, anchor="w", font=ctk.CTkFont(size=14, weight="bold"),
+                text=f"{b['name']}  —  {b['enqueued']} de {b['total']} músicas na fila",
+            ).pack(fill="x", padx=12, pady=(10, 2))
+            if b["pending"]:
+                ctk.CTkLabel(
+                    box, anchor="w", text_color=("gray35", "gray65"),
+                    text=f"Faltam {b['pending']} músicas. Quando este lote terminar, continue de onde parou.",
+                ).pack(fill="x", padx=12)
+            if b["capped"]:
+                ctk.CTkLabel(
+                    box, anchor="w", justify="left", wraplength=880, text=CAPPED_HELP,
+                    text_color=("#8a5a00", "#ffc15e"),
+                ).pack(fill="x", padx=12, pady=(4, 0))
+            row = ctk.CTkFrame(box, fg_color="transparent")
+            row.pack(fill="x", padx=12, pady=10)
+            if b["pending"]:
+                ctk.CTkButton(
+                    row, text=f"Continuar (próximas {b['next']})", width=220,
+                    command=lambda i=b["id"]: self.manager.continue_batch(i),
+                ).pack(side="left", padx=(0, 8))
+            ctk.CTkButton(
+                row, text="Dispensar", width=110, fg_color="gray40", hover_color="gray30",
+                command=lambda i=b["id"]: self.manager.dismiss_batch(i),
+            ).pack(side="left")
 
     def _append_log(self, line: str) -> None:
         self.log_box.configure(state="normal")

@@ -66,6 +66,11 @@ textarea::placeholder,input::placeholder{color:var(--mute)}
 .st{font-size:13px;color:var(--mute);grid-column:2}
 .job.done .st{color:var(--mint)} .job.error .st{color:var(--red)} .job.skipped .st{color:var(--amber)}
 .act{grid-column:3;grid-row:1 / span 3}
+.batch{border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin:8px 0;background:var(--bg2)}
+.batch b{font:700 16px var(--display);display:block}
+.batch p{margin:6px 0 0;font-size:14px;color:var(--mute)}
+.batch p.warn{color:var(--amber)}
+.batch .row{margin-top:12px}
 .empty{color:var(--mute);text-align:center;padding:44px 12px}
 .empty b{display:block;font:700 20px var(--display);color:var(--text);margin-bottom:6px}
 .tools{display:flex;gap:10px;justify-content:flex-end;margin-top:14px}
@@ -110,6 +115,7 @@ nav svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.8;st
         </div>
       </div>
       <div class="notice" id="notice" role="status"></div>
+      <div id="batches"></div>
       <ul class="list" id="jobs"></ul>
       <div class="empty" id="empty"><b>Nenhuma música na fila</b>Cole um link acima ou compartilhe um link do YouTube/Spotify com o Sonora.</div>
       <div class="tools" id="tools" hidden>
@@ -145,7 +151,9 @@ nav svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.8;st
         <label class="f">Separador de artistas<input type="text" id="s_artist_separator"></label>
 
         <h2>Downloads</h2>
-        <label class="f">Simultâneos (1 a 4)<input type="text" inputmode="numeric" id="s_concurrent_downloads"></label>
+        <label class="f">Simultâneos (1 a 6)<input type="text" inputmode="numeric" id="s_concurrent_downloads"></label>
+        <label class="f">Pausar a cada N músicas (0 = nunca)<input type="text" inputmode="numeric" id="s_batch_size"></label>
+        <p class="hint">Playlists maiores baixam um lote por vez; toque em Continuar para o próximo.</p>
         <label class="f">Interpretador de JavaScript
           <select id="s_js_runtime"><option value="">Automático (Deno)</option><option value="node">Node.js</option>
           <option value="deno">Deno</option><option value="bun">Bun</option><option value="quickjs">QuickJS</option></select></label>
@@ -234,12 +242,33 @@ function renderState(st) {
     if (!li) { li = jobNode(j); nodes.set(j.id, li); list.append(li); }
     renderJob(li, j);
   }
-  $("empty").hidden = st.jobs.length > 0;
+  renderBatches(st.batches || [], st.capped_help || "");
+  $("empty").hidden = st.jobs.length > 0 || (st.batches || []).length > 0;
   $("tools").hidden = st.jobs.length === 0;
   $("pill").textContent = st.active ? `${st.active} em andamento` : "Pronto";
   $("pill").classList.toggle("busy", st.active > 0);
   $("notice").textContent = st.notice || "";
   $("log").textContent = st.log.join("\n");
+}
+function renderBatches(list, help) {
+  const key = JSON.stringify(list);
+  const box = $("batches");
+  if (box.dataset.key === key) return;
+  box.dataset.key = key; box.replaceChildren();
+  for (const b of list) {
+    const d = document.createElement("div"); d.className = "batch";
+    const t = document.createElement("b"); t.textContent = `${b.name} — ${b.enqueued} de ${b.total} músicas na fila`; d.append(t);
+    if (b.pending) { const p = document.createElement("p"); p.textContent = `Faltam ${b.pending} músicas. Quando este lote terminar, continue de onde parou.`; d.append(p); }
+    if (b.capped) { const p = document.createElement("p"); p.className = "warn"; p.textContent = help; d.append(p); }
+    const row = document.createElement("div"); row.className = "row";
+    if (b.pending) {
+      const c = document.createElement("button"); c.className = "btn primary"; c.type = "button";
+      c.textContent = `Continuar (próximas ${b.next})`; c.onclick = () => api("/api/continue", {id: b.id}).then(poll); row.append(c);
+    }
+    const x = document.createElement("button"); x.className = "btn"; x.type = "button"; x.textContent = "Dispensar";
+    x.onclick = () => api("/api/dismiss", {id: b.id}).then(poll); row.append(x);
+    d.append(row); box.append(d);
+  }
 }
 let polling = false;
 async function poll() {
@@ -300,6 +329,7 @@ async function loadSettings() {
   for (const k of TEXTS) $("s_" + k).value = s[k] ?? "";
   for (const k of BOOLS) $("s_" + k).checked = !!s[k];
   $("s_concurrent_downloads").value = s.concurrent_downloads;
+  $("s_batch_size").value = s.batch_size;
   $("s_spotify_client_secret").placeholder = s.spotify_client_secret_set ? "(já definido — deixe vazio para manter)" : "";
   const seg = $("s_bitrate"); seg.replaceChildren();
   for (const b of s.bitrates) {
@@ -314,6 +344,7 @@ $("form").onsubmit = async (e) => {
   for (const k of TEXTS) body[k] = $("s_" + k).value;
   for (const k of BOOLS) body[k] = $("s_" + k).checked;
   body.concurrent_downloads = parseInt($("s_concurrent_downloads").value, 10) || 2;
+  const bs = parseInt($("s_batch_size").value, 10); body.batch_size = Number.isNaN(bs) ? 100 : bs;
   body.spotify_client_secret = $("s_spotify_client_secret").value;
   try { await api("/api/settings", body); $("s_spotify_client_secret").value = ""; $("setmsg").textContent = "Ajustes salvos."; }
   catch (err) { $("setmsg").textContent = err.message; }

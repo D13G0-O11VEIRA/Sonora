@@ -61,15 +61,25 @@ class Resolved:
     tracks: list[TrackMeta]
     name: str = ""
     kind: str = "single"           # single | album | playlist
+    capped: bool = False           # o Spotify entregou exatamente o limite (~100): pode haver mais faixas
+
+
+_batch_ids = itertools.count(1)
 
 
 class Batch:
     """Agrupa as faixas de uma playlist/álbum (para pasta + arquivo .m3u8)."""
 
-    def __init__(self, name: str, kind: str, folder: Path):
+    def __init__(self, name: str, kind: str, folder: Path, total: int = 0, capped: bool = False):
+        self.id = next(_batch_ids)
         self.name = name
         self.kind = kind
         self.folder = folder
+        self.total = total             # tamanho da lista que o serviço entregou
+        self.capped = capped
+        self.dismissed = False
+        self.pending: list[TrackMeta] = []   # faixas ainda não enfileiradas ("Continuar")
+        self.enqueued = 0
         self.jobs: list["Job"] = []
         self.remaining = 0
         self.lock = threading.Lock()

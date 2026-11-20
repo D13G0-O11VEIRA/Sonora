@@ -24,6 +24,7 @@ que o Windows mostra no painel *Detalhes*.
 - **Letras** via LRCLIB, opcionalmente também em `.lrc` sincronizado
 - Para o Spotify, escolhe no YouTube a versão certa (compara duração, título, canal "Topic", penaliza ao vivo/cover/remix)
 - **Playlists/álbuns** em subpasta própria + arquivo **.m3u8**
+- **Playlists grandes em lotes**: baixa 100 por vez e mostra o botão **Continuar** para seguir de onde parou (tamanho do lote configurável; `0` = nunca pausar)
 - **Biblioteca**: lista seus MP3 e abre um **editor de tags** (capa, letra, "buscar dados online", renomear pelo modelo)
 - **Modelos de nome de arquivo** configuráveis (`{artist} - {title}`, `{artist}/{album}/{track} - {title}`…)
 - Histórico em SQLite para **não baixar duas vezes**, downloads simultâneos (1–6), log em arquivo
@@ -73,11 +74,22 @@ em vez de errados — e você pode corrigir na aba **Biblioteca** (duplo clique 
 O Spotify protege seu áudio com DRM, então **nenhum programa baixa o áudio de lá**: o Sonora lê os *metadados* do Spotify e
 baixa o áudio equivalente do YouTube.
 
-- **Sem configuração**, links de faixa/álbum/playlist funcionam pela página pública do Spotify (playlists: até ~100 faixas).
+- **Sem configuração**, links de faixa/álbum/playlist funcionam pela página pública do Spotify, que entrega no máximo **~100 faixas** por playlist (veja "Playlists com mais de 100 músicas" abaixo).
 - **Credenciais (opcional)** em *Configurações → Spotify*: crie um app em <https://developer.spotify.com/dashboard>.
   Desde fev/2026 o Spotify exige conta **Premium** para apps em *Development Mode* e só libera os itens de playlists
   **suas ou colaborativas** pela API. Por isso o Sonora tenta a API e, se ela recusar, **volta sozinho** para a página pública.
 - Links de **artista** não são suportados (use álbuns/playlists).
+
+## Playlists com mais de 100 músicas
+
+- **YouTube / YouTube Music:** sem limite. Playlists grandes entram em **lotes de 100**: ao terminar um lote aparece, acima da
+  fila, o cartão **"Continuar (próximas 100)"** (interface gráfica e web). Mude o tamanho em *Configurações → Pausar a cada N
+  músicas* (`0` = baixar tudo direto). No terminal não há pausa; use `--batch-size N` se quiser fatiar.
+- **Spotify:** sem login o Spotify entrega só as **100 primeiras** faixas de uma playlist (e a API oficial, para apps novos,
+  só lê playlists suas). O Sonora detecta o limite e avisa. Para baixar o resto: no Spotify do computador abra a playlist,
+  clique numa música, **Ctrl+A** e **Ctrl+C**, e cole no Sonora. Cada link é reconhecido e o que **já foi baixado é pulado**,
+  então só as que faltam são baixadas — na prática, "continua de onde parou".
+- **Se o programa fechar no meio**, cole o link de novo: o histórico (`data/history.db`) evita repetir o que já existe.
 
 ## Qualidade do áudio
 
@@ -128,7 +140,7 @@ Quer mudar o pipeline? Tudo passa por `Manager._process` em `sonora/manager.py`.
 
 As duas versões fazem o mesmo trabalho (links → MP3 com título, artistas, álbum, ano, capa e letra) e seguem a mesma
 lógica de escolha da versão certa no YouTube para links do Spotify. A versão mobile é uma reescrita em Kotlin: algumas
-opções da versão desktop não existem nela (veja o README do repositório Sonora-android).
+opções da versão desktop não existem nela. Para quem não é técnico, ela é um único arquivo `Sonora.apk` que se instala sozinho (veja o README do repositório Sonora-android).
 
 ## Uso responsável
 

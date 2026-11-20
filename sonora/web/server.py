@@ -21,6 +21,7 @@ from urllib.parse import parse_qs, quote, urlparse
 
 from .. import APP_NAME, __version__
 from ..config import BITRATES, Settings
+from ..texts import CAPPED_HELP
 
 if TYPE_CHECKING:  # o Manager só é importado em serve(): o servidor em si é testável sem yt-dlp/mutagen
     from ..manager import Manager
@@ -62,6 +63,8 @@ def apply_settings_dict(settings: Settings, data: dict) -> list[str]:
             continue
         if f.name == "concurrent_downloads":
             val = max(1, min(6, val))
+        if f.name == "batch_size":
+            val = max(0, min(1000, val))
         if f.name == "artist_separator" and not val:
             val = "; "
         if f.name == "filename_template" and not val.strip():
@@ -124,6 +127,8 @@ class SonoraServer(ThreadingHTTPServer):
             "active": sum(1 for j in jobs if j["active"]),
             "notice": self.notice if time.time() - self.notice_at < 20 else "",
             "log": list(self.log_lines)[-40:],
+            "batches": getattr(self.manager, "batch_info", lambda: [])(),
+            "capped_help": CAPPED_HELP,
             "version": __version__,
         }
 
@@ -242,6 +247,12 @@ class Handler(BaseHTTPRequestHandler):
             return self._json({"ok": True})
         if path == "/api/cancel_all":
             mgr.cancel_all()
+            return self._json({"ok": True})
+        if path in ("/api/continue", "/api/dismiss"):
+            bid = int(body.get("id", 0) or 0)
+            if path.endswith("continue"):
+                return self._json({"started": mgr.continue_batch(bid)})
+            mgr.dismiss_batch(bid)
             return self._json({"ok": True})
         if path == "/api/clear":
             return self._json({"cleared": len(mgr.forget_finished())})

@@ -24,6 +24,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("-b", "--bitrate", choices=BITRATES, help="qualidade do MP3 (kbps)")
     p.add_argument("-t", "--template", help="modelo do nome do arquivo, ex.: '{artist} - {title}'")
     p.add_argument("-j", "--jobs", type=int, help="downloads simultâneos (1-6)")
+    p.add_argument("--batch-size", type=int, default=0,
+                   help="pausar a cada N músicas de playlists grandes (padrão 0: baixa tudo direto)")
     p.add_argument("--no-lyrics", action="store_true", help="não buscar letras")
     p.add_argument("--no-online", action="store_true", help="não completar metadados online (iTunes)")
     p.add_argument("--no-cover", action="store_true", help="não embutir capa")
@@ -46,6 +48,7 @@ def apply_args(settings: Settings, a: argparse.Namespace) -> None:
         settings.filename_template = a.template
     if a.jobs:
         settings.concurrent_downloads = max(1, min(6, a.jobs))
+    settings.batch_size = max(0, a.batch_size)       # no terminal não há botão "Continuar"
     if a.no_lyrics:
         settings.fetch_lyrics = False
     if a.no_online:

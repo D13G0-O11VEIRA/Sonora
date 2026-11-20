@@ -37,6 +37,14 @@ class FakeManager:
         return done
     def apply_settings(self): pass
     def log(self, msg): pass
+    def batch_info(self):
+        return [{"id": 7, "name": "Lista", "kind": "playlist", "enqueued": 100, "total": 250,
+                 "pending": 150, "next": 100, "capped": True}]
+    def continue_batch(self, bid):
+        self.continued = bid
+        return 100
+    def dismiss_batch(self, bid):
+        self.dismissed = bid
 
 
 class WebTests(unittest.TestCase):
@@ -101,6 +109,17 @@ class WebTests(unittest.TestCase):
         self.assertEqual(json.loads(raw)["added"], 2)
         self.assertIn("https://youtu.be/dQw4w9WgXcQ", self.mgr.added[-1])
 
+    def test_batches_in_state_and_continue(self):
+        st, _, raw = self.req("GET", "/api/state")
+        data = json.loads(raw)
+        self.assertEqual(data["batches"][0]["pending"], 150)
+        self.assertIn("100", data["capped_help"])
+        st, _, raw = self.req("POST", "/api/continue", {"id": 7})
+        self.assertEqual(json.loads(raw)["started"], 100)
+        self.assertEqual(self.mgr.continued, 7)
+        self.req("POST", "/api/dismiss", {"id": 7})
+        self.assertEqual(self.mgr.dismissed, 7)
+
     def test_post_requires_json(self):
         st, _, _ = self.req("POST", "/api/add", b"text=x", {"Content-Type": "text/plain"})
         self.assertEqual(st, 415)
@@ -147,6 +166,8 @@ class WebTests(unittest.TestCase):
 class TestApplySettings(unittest.TestCase):
     def test_validation(self):
         s = Settings()
+        apply_settings_dict(s, {"batch_size": 99999})
+        self.assertEqual(s.batch_size, 1000)
         changed = apply_settings_dict(s, {"bitrate": "999", "js_runtime": "rm -rf", "artist_separator": "",
                                           "filename_template": "  ", "theme": "light", "nope": 1})
         self.assertEqual(s.bitrate, "320")
